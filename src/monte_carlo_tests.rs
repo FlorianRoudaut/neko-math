@@ -1,51 +1,66 @@
-use crate::{Path, PathParameters, SeedableRng, StdRng, compute_stats, generate_path};
+use crate::{MonteCarloParameters, Path, SeedableRng, StdRng, compute_stats, generate_paths};
 
 const SEED: u64 = 42;
 
-fn params(n_steps: usize, mean: f64, std_dev: f64) -> PathParameters {
-    PathParameters { n_steps, mean, std_dev }
+fn params(n_paths: usize, n_steps: usize, mean: f64, std_dev: f64) -> MonteCarloParameters {
+    MonteCarloParameters { n_paths, n_steps, mean, std_dev }
+}
+
+fn paths(seed: u64, params: &MonteCarloParameters) -> Vec<Path> {
+    generate_paths(&mut StdRng::seed_from_u64(seed), params)
 }
 
 #[test]
-fn generate_path_with_no_steps_is_empty() {
-    let mut rng = StdRng::seed_from_u64(SEED);
-    assert!(generate_path(&mut rng, &params(0, 0.0, 1.0)).values.is_empty());
+fn generate_paths_returns_n_paths_of_n_steps() {
+    let paths = paths(SEED, &params(5, 10, 0.0, 1.0));
+    assert_eq!(paths.len(), 5);
+    assert!(paths.iter().all(|p| p.returns.len() == 10));
 }
 
 #[test]
-fn generate_path_has_one_value_per_step() {
-    let mut rng = StdRng::seed_from_u64(SEED);
-    assert_eq!(generate_path(&mut rng, &params(1, 0.0, 1.0)).values.len(), 1);
-    assert_eq!(generate_path(&mut rng, &params(100, 0.0, 1.0)).values.len(), 100);
+fn generate_paths_with_no_paths_is_empty() {
+    assert!(paths(SEED, &params(0, 10, 0.0, 1.0)).is_empty());
 }
 
 #[test]
-fn generate_path_with_zero_std_is_a_straight_line() {
-    let mut rng = StdRng::seed_from_u64(SEED);
-    let expected = Path { values: vec![0.5, 1.0, 1.5, 2.0] };
-    assert_eq!(generate_path(&mut rng, &params(4, 0.5, 0.0)), expected);
+fn generate_paths_with_no_steps_gives_empty_paths() {
+    let paths = paths(SEED, &params(3, 0, 0.0, 1.0));
+    assert_eq!(paths.len(), 3);
+    assert!(paths.iter().all(|p| p.returns.is_empty()));
 }
 
 #[test]
-fn generate_path_with_same_seed_is_reproducible() {
-    let path1 = generate_path(&mut StdRng::seed_from_u64(SEED), &params(1000, 0.0, 1.0));
-    let path2 = generate_path(&mut StdRng::seed_from_u64(SEED), &params(1000, 0.0, 1.0));
-    assert_eq!(path1, path2);
+fn generate_paths_with_zero_std_are_straight_lines() {
+    let expected = Path { returns: vec![0.5, 1.0, 1.5, 2.0] };
+    assert!(paths(SEED, &params(3, 4, 0.5, 0.0)).iter().all(|p| *p == expected));
 }
 
 #[test]
-fn generate_path_with_different_seeds_differs() {
-    let path1 = generate_path(&mut StdRng::seed_from_u64(SEED), &params(1000, 0.0, 1.0));
-    let path2 = generate_path(&mut StdRng::seed_from_u64(SEED + 1), &params(1000, 0.0, 1.0));
-    assert_ne!(path1, path2);
+fn generate_paths_gives_different_paths() {
+    let paths = paths(SEED, &params(2, 100, 0.0, 1.0));
+    assert_ne!(paths[0], paths[1]);
 }
 
 #[test]
-fn generate_path_increments_match_mean_and_std() {
+fn generate_paths_with_same_seed_is_reproducible() {
+    let params = params(3, 100, 0.0, 1.0);
+    assert_eq!(paths(SEED, &params), paths(SEED, &params));
+}
+
+#[test]
+fn generate_paths_with_different_seeds_differs() {
+    let params = params(3, 100, 0.0, 1.0);
+    assert_ne!(paths(SEED, &params), paths(SEED + 1, &params));
+}
+
+#[test]
+fn generate_paths_increments_match_mean_and_std() {
     let (mean, std_dev) = (0.1, 2.0);
-    let path = generate_path(&mut StdRng::seed_from_u64(SEED), &params(100_000, mean, std_dev)).values;
-    let increments: Vec<f64> = std::iter::once(path[0])
-        .chain(path.windows(2).map(|w| w[1] - w[0]))
+    let increments: Vec<f64> = paths(SEED, &params(100, 1000, mean, std_dev))
+        .iter()
+        .flat_map(|p| {
+            std::iter::once(p.returns[0]).chain(p.returns.windows(2).map(|w| w[1] - w[0]))
+        })
         .collect();
 
     let stats = compute_stats(&increments).unwrap();
