@@ -1,4 +1,5 @@
 
+#[derive(Debug)]
 pub struct Stats {
     pub mean: f64,
     pub std: f64,
