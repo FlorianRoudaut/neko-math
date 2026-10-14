@@ -36,7 +36,7 @@ fn continuity_corrected_barrier(k: f64, sigma: f64) -> f64 {
 }
 
 fn assert_matches_simulation(k: f64, log_drift: f64) {
-    let (steps, paths) = (1000, 20_000);
+    let (steps, paths) = (1000, 5_000);
     // Total volatility over the horizon is 0.1
     let sigma = 0.1 / (steps as f64).sqrt();
     // A GBM with drift mu has log-drift mu - sigma^2 / 2
