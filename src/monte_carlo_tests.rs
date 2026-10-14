@@ -1,13 +1,13 @@
-use crate::{MonteCarloParameters, Path, SeedableRng, StdRng, compute_stats, generate_paths};
+use crate::{MonteCarloParameters, Path, compute_stats, generate_paths};
 
 const SEED: u64 = 42;
 
-fn params(n_paths: usize, n_steps: usize, mean: f64, std_dev: f64) -> MonteCarloParameters {
-    MonteCarloParameters { n_paths, n_steps, mean, std_dev }
+fn params(paths_number: usize, steps_number: usize, mean: f64, std_dev: f64) -> MonteCarloParameters {
+    MonteCarloParameters { paths_number, steps_number, mean, std_dev, seed: SEED }
 }
 
 fn paths(seed: u64, params: &MonteCarloParameters) -> Vec<Path> {
-    generate_paths(&mut StdRng::seed_from_u64(seed), params)
+    generate_paths(&MonteCarloParameters { seed, ..*params })
 }
 
 #[test]
