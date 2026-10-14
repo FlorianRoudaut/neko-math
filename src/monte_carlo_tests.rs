@@ -3,11 +3,14 @@ use crate::{MonteCarloParameters, Path, compute_stats, generate_paths};
 const SEED: u64 = 42;
 
 fn params(paths_number: usize, steps_number: usize, mean: f64, std_dev: f64) -> MonteCarloParameters {
-    MonteCarloParameters { paths_number, steps_number, mean, std_dev, seed: SEED }
+    MonteCarloParameters { paths_number, steps_number, mean, std_dev, seed: SEED, batch_size: 10 }
 }
 
+/// Collects all the batches into one Vec
 fn paths(seed: u64, params: &MonteCarloParameters) -> Vec<Path> {
-    generate_paths(&MonteCarloParameters { seed, ..*params })
+    let mut paths = Vec::new();
+    generate_paths(&MonteCarloParameters { seed, ..*params }, |batch| paths.extend(batch));
+    paths
 }
 
 #[test]
@@ -67,4 +70,25 @@ fn generate_paths_increments_match_mean_and_std() {
     // Standard error of the mean is std_dev / sqrt(n) ≈ 0.0063, allow ~5 of them
     assert!((stats.mean - mean).abs() < 0.03, "mean {} expected {}", stats.mean, mean);
     assert!((stats.std - std_dev).abs() < 0.03, "std {} expected {}", stats.std, std_dev);
+}
+
+#[test]
+fn generate_paths_splits_into_batches_of_batch_size() {
+    let params = MonteCarloParameters { batch_size: 4, ..params(10, 5, 0.0, 1.0) };
+    let mut batch_lens = Vec::new();
+    generate_paths(&params, |batch| batch_lens.push(batch.len()));
+    assert_eq!(batch_lens, vec![4, 4, 2]);
+}
+
+#[test]
+fn generate_paths_does_not_depend_on_batch_size() {
+    let one_batch = paths(SEED, &MonteCarloParameters { batch_size: 100, ..params(10, 50, 0.0, 1.0) });
+    let small_batches = paths(SEED, &MonteCarloParameters { batch_size: 3, ..params(10, 50, 0.0, 1.0) });
+    assert_eq!(one_batch, small_batches);
+}
+
+#[test]
+#[should_panic(expected = "Batch size must be positive")]
+fn generate_paths_with_zero_batch_size_panics() {
+    generate_paths(&MonteCarloParameters { batch_size: 0, ..params(10, 5, 0.0, 1.0) }, |_| {});
 }

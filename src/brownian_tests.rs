@@ -7,23 +7,22 @@ const SEED: u64 = 42;
 /// The paths start at log(S0) = 0 and add N(log_drift, sigma^2) increments per step.
 fn simulated_hit_probability(k: f64, steps: usize, log_drift: f64, sigma: f64, paths: usize) -> f64 {
     let barrier = (k / S0).ln();
-    let batch_size = 1000;
+    let params = MonteCarloParameters {
+        paths_number: paths,
+        steps_number: steps,
+        mean: log_drift,
+        std_dev: sigma,
+        seed: SEED,
+        batch_size: 1000,
+    };
     let mut hits = 0;
-    // Batched to keep memory bounded
-    for batch in 0..paths / batch_size {
-        let params = MonteCarloParameters {
-            paths_number: batch_size,
-            steps_number: steps,
-            mean: log_drift,
-            std_dev: sigma,
-            seed: SEED + batch as u64,
-        };
-        hits += generate_paths(&params)
+    generate_paths(&params, |batch| {
+        hits += batch
             .iter()
             .filter(|p| p.returns.iter().any(|&r| if barrier > 0.0 { r >= barrier } else { r <= barrier }))
             .count();
-    }
-    hits as f64 / (paths / batch_size * batch_size) as f64
+    });
+    hits as f64 / paths as f64
 }
 
 /// Checking the barrier only at discrete steps misses crossings between them.

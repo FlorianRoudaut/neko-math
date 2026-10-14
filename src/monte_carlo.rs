@@ -10,6 +10,8 @@ pub struct MonteCarloParameters {
     pub mean: f64,
     pub std_dev: f64,
     pub seed: u64,
+    /// Number of paths kept in memory at once by generate_paths
+    pub batch_size: usize,
 }
 
 /// Simulated path: the level of the walk after each step
@@ -28,12 +30,20 @@ fn generate_path(rng: &mut StdRng, params: &MonteCarloParameters) -> Path {
     Path { returns }
 }
 
-pub fn generate_paths(params: &MonteCarloParameters) -> Vec<Path> {
+/// Generates paths_number paths and hands them to on_batch, batch_size paths at a time,
+/// so that only one batch is in memory at once. The last batch can be smaller.
+/// All batches share one generator seeded once, so the paths don't depend on batch_size.
+pub fn generate_paths(params: &MonteCarloParameters, mut on_batch: impl FnMut(Vec<Path>)) {
+    assert!(params.batch_size > 0, "Batch size must be positive.");
     let mut rng = StdRng::seed_from_u64(params.seed);
-    let mut paths = Vec::with_capacity(params.paths_number);
-    for _ in 0..params.paths_number {
-        let path = generate_path(&mut rng, params);
-        paths.push(path);
+    let mut remaining = params.paths_number;
+    while remaining > 0 {
+        let batch_len = remaining.min(params.batch_size);
+        let mut batch = Vec::with_capacity(batch_len);
+        for _ in 0..batch_len {
+            batch.push(generate_path(&mut rng, params));
+        }
+        on_batch(batch);
+        remaining -= batch_len;
     }
-    paths
 }
