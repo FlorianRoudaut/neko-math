@@ -1,7 +1,11 @@
 pub mod box_muller;
 pub mod monte_carlo;
+pub mod normal_cdf;
 pub mod stats;
+#[cfg(test)]
+mod normal_cdf_tests;
 
 pub use box_muller::{box_muller, normal_variable};
 pub use monte_carlo::generate_path;
-pub use stats::{Stats, compute_stats, normal_cdf, normal_cdf_general, normal_inverse_cdf};
+pub use normal_cdf::{normal_cdf, normal_cdf_general, normal_inverse_cdf};
+pub use stats::{Stats, compute_stats};
