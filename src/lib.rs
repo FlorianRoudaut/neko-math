@@ -7,6 +7,10 @@ pub mod stats;
 mod normal_cdf_tests;
 #[cfg(test)]
 mod monte_carlo_tests;
+#[cfg(test)]
+mod stats_tests;
+#[cfg(test)]
+mod brownian_tests;
 
 pub use box_muller::{box_muller, normal_variable};
 pub use brownian::first_passage_probability;

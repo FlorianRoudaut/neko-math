@@ -1,7 +1,7 @@
 use crate::normal_cdf::normal_cdf;
 
 /// Calculates the probability that a Geometric Brownian Motion process 
-/// hits barrier K before time T: P(\tau <= T).
+/// hits barrier K before time T: P(\tau <= T). K can be above or below S_0.
 ///
 /// Parameters:
 /// - `s0`: Initial asset price S_0 (must be > 0)
@@ -15,27 +15,27 @@ pub fn first_passage_probability(s0: f64, k: f64, t: f64, mu: f64, sigma: f64) -
     assert!(t > 0.0, "Time t must be positive.");
     assert!(sigma > 0.0, "Volatility sigma must be positive.");
 
-    // Trivial case: barrier already hit/exceeded at t = 0
-    if (k >= s0 && s0 >= k) || (k > s0 && s0 >= k) || (k < s0 && s0 <= k) {
-        // Handle floating point exact equality or boundary start
-    }
-    
     let sigma_sq = sigma * sigma;
-    let sqrt_t = t.sqrt();
     let log_k_s0 = (k / s0).ln();
-    
-    let drift_term = (mu - 0.5 * sigma_sq) * t;
-    let denom = sigma * sqrt_t;
+    // Drift of ln(S): nu = mu - 0.5 * sigma^2
+    let nu = mu - 0.5 * sigma_sq;
 
-    // First term argument: (-ln(K/S0) + (mu - 0.5 * sigma^2)*T) / (sigma * sqrt(T))
-    let d1 = (-log_k_s0 + drift_term) / denom;
-    
-    // Second term argument: (-ln(K/S0) - (mu - 0.5 * sigma^2)*T) / (sigma * sqrt(T))
-    let d2 = (-log_k_s0 - drift_term) / denom;
+    // A barrier below S0 is the mirror image of a barrier above it:
+    // use the distance to the barrier and the drift towards it
+    let distance = log_k_s0.abs();
+    let drift_towards_barrier = if log_k_s0 >= 0.0 { nu } else { -nu };
 
-    // Power factor: (K / S0)^(2*mu / sigma^2 - 1)
-    let power_exponent = (2.0 * mu / sigma_sq) - 1.0;
-    let power_factor = (k / s0).powf(power_exponent);
+    let drift_term = drift_towards_barrier * t;
+    let denom = sigma * t.sqrt();
+
+    // First term argument: (-|ln(K/S0)| + drift * T) / (sigma * sqrt(T))
+    let d1 = (-distance + drift_term) / denom;
+
+    // Second term argument: (-|ln(K/S0)| - drift * T) / (sigma * sqrt(T))
+    let d2 = (-distance - drift_term) / denom;
+
+    // Power factor: exp(2 * drift * |ln(K/S0)| / sigma^2), equal to (K / S0)^(2 * nu / sigma^2) in both directions
+    let power_factor = (2.0 * drift_towards_barrier * distance / sigma_sq).exp();
 
     let prob = normal_cdf(d1) + power_factor * normal_cdf(d2);
 

@@ -83,3 +83,30 @@ fn normal_cdf_inverts_normal_inverse_cdf() {
         assert!(((round_trip - p) / p).abs() < 1e-7, "Φ(Φ⁻¹({})) = {}", p, round_trip);
     }
 }
+
+// Breakpoints between the regions of Acklam's algorithm
+const P_LOW: f64 = 0.02425;
+const P_HIGH: f64 = 1.0 - P_LOW;
+
+#[test]
+fn normal_inverse_cdf_is_continuous_at_region_boundaries() {
+    let eps = 1e-12;
+    for p in [P_LOW, P_HIGH] {
+        let below = normal_inverse_cdf(p - eps);
+        let above = normal_inverse_cdf(p + eps);
+        // The slope is about 1 / φ(2) ≈ 18, so the true gap is ~4e-11
+        assert!((above - below).abs() < 1e-8, "jump at p = {}: {} vs {}", p, below, above);
+    }
+}
+
+#[test]
+fn normal_inverse_cdf_is_increasing() {
+    let n = 100_000;
+    let mut previous = f64::NEG_INFINITY;
+    for i in 1..n {
+        let p = i as f64 / n as f64;
+        let z = normal_inverse_cdf(p);
+        assert!(z > previous, "Φ⁻¹({}) = {} is not above the previous value {}", p, z, previous);
+        previous = z;
+    }
+}
