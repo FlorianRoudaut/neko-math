@@ -1,9 +1,8 @@
 use std::f64::consts::PI;
-use rand::{RngExt, rng};
+use rand::{Rng, RngExt};
 
-pub fn box_muller() -> (f64, f64) {
-    let mut rng = rng();
-    // Generate u1 in range (0, 1] to avoid ln(0)
+pub fn box_muller<R: Rng + ?Sized>(rng: &mut R) -> (f64, f64) {
+    // Generate u1 in range (0, 1) to avoid ln(0)
     let u1 = loop {
         let val = rng.random::<f64>();
         if val > 0.0 {
@@ -21,7 +20,7 @@ pub fn box_muller() -> (f64, f64) {
     (z0, z1)
 }
 
-pub fn normal_variable(mean: f64, std_dev: f64) -> f64 {
-    let (z0, _) = box_muller();
+pub fn normal_variable<R: Rng + ?Sized>(rng: &mut R, mean: f64, std_dev: f64) -> f64 {
+    let (z0, _) = box_muller(rng);
     mean + z0 * std_dev
 }

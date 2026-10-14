@@ -8,6 +8,7 @@ mod normal_cdf_tests;
 mod monte_carlo_tests;
 
 pub use box_muller::{box_muller, normal_variable};
-pub use monte_carlo::generate_path;
+pub use monte_carlo::{Path, PathParameters, generate_path};
 pub use normal_cdf::{normal_cdf, normal_cdf_general, normal_inverse_cdf};
 pub use stats::{Stats, compute_stats};
+pub use rand::{Rng, SeedableRng, rngs::StdRng};
