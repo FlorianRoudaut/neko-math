@@ -4,6 +4,8 @@ pub mod normal_cdf;
 pub mod stats;
 #[cfg(test)]
 mod normal_cdf_tests;
+#[cfg(test)]
+mod monte_carlo_tests;
 
 pub use box_muller::{box_muller, normal_variable};
 pub use monte_carlo::generate_path;
